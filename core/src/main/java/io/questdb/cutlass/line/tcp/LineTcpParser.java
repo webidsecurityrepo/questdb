@@ -69,6 +69,7 @@ public class LineTcpParser implements Closeable {
     private long bufAt;
     private long entityLo;
     private boolean tagsComplete;
+    private boolean tagStartsWithQuote;
     private int nEscapedChars;
     private boolean isQuotedFieldValue;
     private int nEntities;
@@ -239,6 +240,8 @@ public class LineTcpParser implements Closeable {
                         break;
                     } else if (isQuotedFieldValue) {
                         return getError();
+                    } else if (entityLo == bufAt) {
+                        tagStartsWithQuote = true;
                     }
 
                 default:
@@ -300,6 +303,7 @@ public class LineTcpParser implements Closeable {
         isQuotedFieldValue = false;
         entityLo = bufAt;
         tagsComplete = false;
+        tagStartsWithQuote = false;
         nEntities = 0;
         currentEntity = null;
         entityHandler = entityTableHandler;
@@ -667,7 +671,7 @@ public class LineTcpParser implements Closeable {
                 }
             }
             type = ENTITY_TYPE_TAG;
-            return value.byteAt(0) != '"' || valueLen < 2 || value.byteAt(valueLen - 1) != '"' || stringAsTagSupported;
+            return !tagStartsWithQuote || valueLen < 2 || value.byteAt(valueLen - 1) != '"' || stringAsTagSupported;
         }
     }
 }
