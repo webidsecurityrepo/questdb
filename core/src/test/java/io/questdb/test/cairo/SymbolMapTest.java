@@ -6,7 +6,7 @@
  *    \__\_\\__,_|\___||___/\__|____/|____/
  *
  *  Copyright (c) 2014-2019 Appsicle
- *  Copyright (c) 2019-2023 QuestDB
+ *  Copyright (c) 2019-2024 QuestDB
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -1043,9 +1043,9 @@ public class SymbolMapTest extends AbstractCairoTest {
         try {
             FilesFacade ff = configuration.getFilesFacade();
             offsetFileName(path.trimTo(plen), name, -1);
-            long size = ff.length(path);
+            long size = ff.length(path.$());
 
-            int fd = TableUtils.openRW(ff, path, LOG, configuration.getWriterFileOpenOpts());
+            long fd = TableUtils.openRW(ff, path.$(), LOG, configuration.getWriterFileOpenOpts());
             long address = TableUtils.mapRW(ff, fd, size, MemoryTag.MMAP_DEFAULT);
             for (long i = keyToOffset(cleanCount); i + 4 < size; i += 4) {
                 Unsafe.getUnsafe().putInt(address + i, rnd.nextInt());

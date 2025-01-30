@@ -6,7 +6,7 @@
  *    \__\_\\__,_|\___||___/\__|____/|____/
  *
  *  Copyright (c) 2014-2019 Appsicle
- *  Copyright (c) 2019-2023 QuestDB
+ *  Copyright (c) 2019-2024 QuestDB
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -73,11 +73,11 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
             final String tableName = testName.getMethodName();
             createTableWithReadOnlyPartition(tableName, ignore -> {
                         try {
-                            ddl("ALTER TABLE " + tableName + " ADD COLUMN ss SYMBOL");
+                            execute("ALTER TABLE " + tableName + " ADD COLUMN ss SYMBOL");
 
                             // silently ignored because the table is read only
-                            insert("INSERT INTO " + tableName + " VALUES(666, 666, 'queso', '" + readOnlyPartitionName + "T23:59:59.999999Z', '¶')");
-                            ddl("ALTER TABLE " + tableName + " ALTER COLUMN ss ADD INDEX CAPACITY 32");
+                            execute("INSERT INTO " + tableName + " VALUES(666, 666, 'queso', '" + readOnlyPartitionName + "T23:59:59.999999Z', '¶')");
+                            execute("ALTER TABLE " + tableName + " ALTER COLUMN ss ADD INDEX CAPACITY 32");
                             assertSql(
                                     "min\tmax\tcount\n" +
                                             "2022-10-17T00:00:17.279900Z\t2022-10-18T23:59:59.000000Z\t10000\n", "SELECT min(ts), max(ts), count() FROM " + tableName
@@ -106,13 +106,13 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
             final String tableName = testName.getMethodName();
             attachPartitionFromSoftLink(tableName, "SNOW", tableToken -> {
                         try {
-                            ddl("ALTER TABLE " + tableName + " DETACH PARTITION LIST '" + readOnlyPartitionName + "'", sqlExecutionContext);
+                            execute("ALTER TABLE " + tableName + " DETACH PARTITION LIST '" + readOnlyPartitionName + "'", sqlExecutionContext);
                             assertSql("min\tmax\tcount\n" +
                                     "2022-10-18T00:00:16.779900Z\t2022-10-18T23:59:59.000000Z\t5000\n", "SELECT min(ts), max(ts), count() FROM " + tableName
                             );
 
                             // verify cold storage folder exists
-                            Assert.assertTrue(Files.exists(other));
+                            Assert.assertTrue(Files.exists(other.$()));
                             AtomicInteger fileCount = new AtomicInteger();
                             ff.walk(other, (file, type) -> fileCount.incrementAndGet());
                             Assert.assertTrue(fileCount.get() > 0);
@@ -123,17 +123,17 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
                                     .concat(readOnlyPartitionName)
                                     .put(configuration.getAttachPartitionSuffix())
                                     .$();
-                            Assert.assertFalse(ff.exists(other));
+                            Assert.assertFalse(ff.exists(other.$()));
 
                             // insert a row at the end of the partition, the only row, which will create the partition
                             // at this point there is no longer information as to weather it was read-only in the past
-                            insert("INSERT INTO " + tableName + " (l, i, ts) VALUES(0, 0, '" + readOnlyPartitionName + "T23:59:59.500001Z')");
+                            execute("INSERT INTO " + tableName + " (l, i, ts) VALUES(0, 0, '" + readOnlyPartitionName + "T23:59:59.500001Z')");
                             assertSql("min\tmax\tcount\n" +
                                     "2022-10-17T23:59:59.500001Z\t2022-10-18T23:59:59.000000Z\t5001\n", "SELECT min(ts), max(ts), count() FROM " + tableName
                             );
 
                             // drop the partition
-                            ddl("ALTER TABLE " + tableName + " DROP PARTITION LIST '" + readOnlyPartitionName + "'", sqlExecutionContext);
+                            execute("ALTER TABLE " + tableName + " DROP PARTITION LIST '" + readOnlyPartitionName + "'", sqlExecutionContext);
                             assertSql("min\tmax\tcount\n" +
                                     "2022-10-18T00:00:16.779900Z\t2022-10-18T23:59:59.000000Z\t5000\n", "SELECT min(ts), max(ts), count() FROM " + tableName
                             );
@@ -152,11 +152,11 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
             final String tableName = testName.getMethodName();
             createTableWithReadOnlyPartition(tableName, ignore -> {
                         try {
-                            ddl("ALTER TABLE " + tableName + " ALTER COLUMN s DROP INDEX");
-                            ddl("ALTER TABLE " + tableName + " ALTER COLUMN s ADD INDEX");
+                            execute("ALTER TABLE " + tableName + " ALTER COLUMN s DROP INDEX");
+                            execute("ALTER TABLE " + tableName + " ALTER COLUMN s ADD INDEX");
 
                             // silently ignored because the partition is read-only
-                            insert("INSERT INTO " + tableName + " VALUES(1492, 10, 'howdy', '" + readOnlyPartitionName + "T23:59:59.999999Z')");
+                            execute("INSERT INTO " + tableName + " VALUES(1492, 10, 'howdy', '" + readOnlyPartitionName + "T23:59:59.999999Z')");
                             assertSql(
                                     "min\tmax\tcount\n" +
                                             "2022-10-17T00:00:17.279900Z\t2022-10-18T23:59:59.000000Z\t10000\n", "SELECT min(ts), max(ts), count() FROM " + tableName
@@ -186,13 +186,13 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
             final String tableName = testName.getMethodName();
             attachPartitionFromSoftLink(tableName, "IGLOO", tableToken -> {
                         try {
-                            ddl("ALTER TABLE " + tableName + " DROP PARTITION LIST '" + readOnlyPartitionName + "'", sqlExecutionContext);
+                            execute("ALTER TABLE " + tableName + " DROP PARTITION LIST '" + readOnlyPartitionName + "'", sqlExecutionContext);
                             assertSql("min\tmax\tcount\n" +
                                     "2022-10-18T00:00:16.779900Z\t2022-10-18T23:59:59.000000Z\t5000\n", "SELECT min(ts), max(ts), count() FROM " + tableName
                             );
 
                             // verify cold storage folder exists
-                            Assert.assertTrue(Files.exists(other));
+                            Assert.assertTrue(Files.exists(other.$()));
                             AtomicInteger fileCount = new AtomicInteger();
                             ff.walk(other, (file, type) -> fileCount.incrementAndGet());
                             Assert.assertTrue(fileCount.get() > 0);
@@ -201,7 +201,7 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
                                     .concat(readOnlyPartitionName)
                                     .put(".2")
                                     .$();
-                            Assert.assertFalse(ff.exists(path));
+                            Assert.assertFalse(ff.exists(path.$()));
                         } catch (SqlException ex) {
                             Assert.fail(ex.getMessage());
                         }
@@ -220,14 +220,14 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
                         try {
                             try (TableReader ignore = engine.getReader(tableToken)) {
                                 // drop the partition which was attached via soft link
-                                ddl("ALTER TABLE " + tableName + " DROP PARTITION LIST '" + readOnlyPartitionName + "'", sqlExecutionContext);
+                                execute("ALTER TABLE " + tableName + " DROP PARTITION LIST '" + readOnlyPartitionName + "'", sqlExecutionContext);
                                 // there is a reader, cannot unlink, thus the link will still exist
                                 path.of(configuration.getRoot()) // <-- soft link path
                                         .concat(tableToken)
                                         .concat(readOnlyPartitionName)
                                         .put(".2")
                                         .$();
-                                Assert.assertTrue(Files.exists(path));
+                                Assert.assertTrue(Files.exists(path.$()));
                             }
                             engine.releaseAllReaders();
                             assertSql("min\tmax\tcount\n" +
@@ -237,11 +237,11 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
                             runO3PartitionPurgeJob();
 
                             // verify cold storage folder still exists
-                            Assert.assertTrue(Files.exists(other));
+                            Assert.assertTrue(Files.exists(other.$()));
                             AtomicInteger fileCount = new AtomicInteger();
                             ff.walk(other, (file, type) -> fileCount.incrementAndGet());
                             Assert.assertTrue(fileCount.get() > 0);
-                            Assert.assertFalse(Files.exists(path));
+                            Assert.assertFalse(Files.exists(path.$()));
                         } catch (SqlException ex) {
                             Assert.fail(ex.getMessage());
                         }
@@ -267,7 +267,7 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
                             );
 
                             try (TableReader ignore = engine.getReader(tableToken)) {
-                                ddl("ALTER TABLE " + tableName + " DROP PARTITION LIST '" + readOnlyPartitionName + "'", sqlExecutionContext);
+                                execute("ALTER TABLE " + tableName + " DROP PARTITION LIST '" + readOnlyPartitionName + "'", sqlExecutionContext);
                             }
 
                             runO3PartitionPurgeJob();
@@ -291,7 +291,7 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
             final String tableName = testName.getMethodName();
             createTableWithReadOnlyPartition(tableName, ignore -> {
                         try {
-                            ddl("ALTER TABLE " + tableName + " DROP PARTITION LIST '" + readOnlyPartitionName + "'", sqlExecutionContext);
+                            execute("ALTER TABLE " + tableName + " DROP PARTITION LIST '" + readOnlyPartitionName + "'", sqlExecutionContext);
                             assertSql("min\tmax\tcount\n" +
                                     "2022-10-18T00:00:16.779900Z\t2022-10-18T23:59:59.000000Z\t5000\n", "SELECT min(ts), max(ts), count() FROM " + tableName
                             );
@@ -442,7 +442,7 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
             );
 
             // silently ignored as the partition is read only
-            insert("INSERT INTO " + tableName + " (l, i, s, ts) VALUES(0, 0, 'ø','" + lastReadOnlyPartitionName + "T23:59:59.500001Z')");
+            execute("INSERT INTO " + tableName + " (l, i, s, ts) VALUES(0, 0, 'ø','" + lastReadOnlyPartitionName + "T23:59:59.500001Z')");
 
             assertUpdateFailsBecausePartitionIsReadOnly(
                     "UPDATE " + tableName + " SET l = 13 WHERE ts = '" + lastReadOnlyPartitionName + "T23:59:16.000100Z'",
@@ -451,7 +451,7 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
             );
 
             // silently ignored as the partition is read only
-            insert("INSERT INTO " + tableName + " (l, i, s, ts) VALUES(-1, -1, 'µ','" + lastReadOnlyPartitionName + "T00:00:00.100005Z')");
+            execute("INSERT INTO " + tableName + " (l, i, s, ts) VALUES(-1, -1, 'µ','" + lastReadOnlyPartitionName + "T00:00:00.100005Z')");
 
             assertUpdateFailsBecausePartitionIsReadOnly(
                     "UPDATE " + tableName + " SET l = 13 WHERE ts = '" + lastReadOnlyPartitionName + "T00:02:08.999700Z'",
@@ -468,7 +468,7 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
             );
 
             // drop active partition
-            ddl("ALTER TABLE " + tableName + " DROP PARTITION LIST '2022-10-21'", sqlExecutionContext);
+            execute("ALTER TABLE " + tableName + " DROP PARTITION LIST '2022-10-21'", sqlExecutionContext);
             assertSql("min\tmax\tcount\n" +
                     "2022-10-17T00:00:43.199900Z\t2022-10-18T00:00:42.999900Z\t2001\n" +
                     "2022-10-18T00:01:26.199800Z\t2022-10-19T00:00:42.799900Z\t2000\n" +
@@ -502,7 +502,7 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
             );
 
             // silently ignored as the partition is read only
-            insert("INSERT INTO " + tableName + " (l, i, s, ts) VALUES(-1, -1, 'µ','" + lastReadOnlyPartitionName + "T23:59:59.990002Z')");
+            execute("INSERT INTO " + tableName + " (l, i, s, ts) VALUES(-1, -1, 'µ','" + lastReadOnlyPartitionName + "T23:59:59.990002Z')");
             assertUpdateFailsBecausePartitionIsReadOnly(
                     "UPDATE " + tableName + " SET l = 13 WHERE ts = '" + lastReadOnlyPartitionName + "T23:59:59.200000Z'",
                     tableName,
@@ -510,7 +510,7 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
 
             // create new partition at the end and append data to it
             String newPartitionName = "2022-10-21";
-            insert("INSERT INTO " + tableName + " (l, i, s, ts) VALUES(-1, -1, 'µ','" + newPartitionName + "T20:00:00.202312Z')");
+            execute("INSERT INTO " + tableName + " (l, i, s, ts) VALUES(-1, -1, 'µ','" + newPartitionName + "T20:00:00.202312Z')");
             update("UPDATE " + tableName + " SET l = 13 WHERE ts = '" + newPartitionName + "T20:00:00.202312Z'");
             assertSql(
                     "l\ti\ts\tts\n" +
@@ -572,7 +572,7 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
             multiInsertStmt += "(0, 1, 'ø', '" + lastPartitionName + "T23:59:59.500004Z'),";
             multiInsertStmt += "(1, 0, 'µ', '" + newPartitionName + "T01:00:27.202901Z'),";
             multiInsertStmt += "(1, 1, 'µ', '" + newPartitionName + "T01:00:27.202902Z');";
-            insert(multiInsertStmt);
+            execute(multiInsertStmt);
             assertSql("l\ti\ts\tts\n" +
                     "1\t0\tµ\t2022-10-22T01:00:27.202901Z\n" +
                     "1\t1\tµ\t2022-10-22T01:00:27.202902Z\n", tableName + " WHERE ts in '" + newPartitionName + "'"
@@ -615,7 +615,7 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
             multiInsertStmt += "(1, 1, 'µø', '" + newPartitionName + "T01:00:27.202901Z'),";
             multiInsertStmt += "(137, -3, 'P', '" + firstPartitionName + "T00:03:09.103056Z'),";
             multiInsertStmt += "(1, 0, 'µ', '" + newPartitionName + "T01:00:26.453476Z');";
-            insert(multiInsertStmt);
+            execute(multiInsertStmt);
             assertSql("l\ti\ts\tts\n" +
                     "1\t0\tµ\t2022-10-22T01:00:26.453476Z\n" +
                     "1\t1\tµø\t2022-10-22T01:00:27.202901Z\n", tableName + " WHERE ts in '" + newPartitionName + "'"
@@ -647,7 +647,7 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
                             );
 
                             // silently ignored as the partition is read only
-                            insert("INSERT INTO " + tableName + " (l, i, s, ts) VALUES(0, 0, 'ø','" + readOnlyPartitionName + "T23:59:59.500001Z')");
+                            execute("INSERT INTO " + tableName + " (l, i, s, ts) VALUES(0, 0, 'ø','" + readOnlyPartitionName + "T23:59:59.500001Z')");
 
                             assertUpdateFailsBecausePartitionIsReadOnly(
                                     "UPDATE " + tableName + " SET l = 13 WHERE ts = '" + readOnlyPartitionName + "T23:59:42.220100Z'",
@@ -656,7 +656,7 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
                             );
 
                             // silently ignored as the partition is read only
-                            insert("INSERT INTO " + tableName + " (l, i, s, ts) VALUES(-1, -1, 'µ','" + readOnlyPartitionName + "T00:00:00.100005Z')");
+                            execute("INSERT INTO " + tableName + " (l, i, s, ts) VALUES(-1, -1, 'µ','" + readOnlyPartitionName + "T00:00:00.100005Z')");
 
                             assertUpdateFailsBecausePartitionIsReadOnly(
                                     "UPDATE " + tableName + " SET l = 13 WHERE ts = '2022-10-17T00:00:34.559800Z'",
@@ -730,10 +730,10 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
             path.of(configuration.getRoot()).concat(tableToken);
             int pathLen = path.size();
             for (int i = 0; i < partitionCount - 2; i++) {
-                ddl("ALTER TABLE " + tableName + " DETACH PARTITION LIST '" + partitionName[i] + "'", sqlExecutionContext);
+                execute("ALTER TABLE " + tableName + " DETACH PARTITION LIST '" + partitionName[i] + "'", sqlExecutionContext);
                 txn++;
                 copyToDifferentLocationAndMakeAttachableViaSoftLink(tableToken, partitionName[i], otherLocation);
-                ddl("ALTER TABLE " + tableName + " ATTACH PARTITION LIST '" + partitionName[i] + "'", sqlExecutionContext);
+                execute("ALTER TABLE " + tableName + " ATTACH PARTITION LIST '" + partitionName[i] + "'", sqlExecutionContext);
                 txn++;
 
                 // verify that the link has been renamed to what we expect
@@ -761,12 +761,12 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
             try (TableReader ignore = engine.getReader(tableToken)) {
                 // drop all partitions but the most recent
                 for (int i = 0, expectedTxn = 2; i < partitionCount - 2; i++, expectedTxn += 2) {
-                    ddl("ALTER TABLE " + tableName + " DROP PARTITION LIST '" + partitionName[i] + "'", sqlExecutionContext);
+                    execute("ALTER TABLE " + tableName + " DROP PARTITION LIST '" + partitionName[i] + "'", sqlExecutionContext);
                     path.trimTo(pathLen).concat(partitionName[i]);
                     TestUtils.txnPartitionConditionally(path, expectedTxn);
                     Assert.assertTrue(Files.exists(path.$()));
                 }
-                ddl("ALTER TABLE " + tableName + " DROP PARTITION LIST '" + partitionName[partitionCount - 2] + "'", sqlExecutionContext);
+                execute("ALTER TABLE " + tableName + " DROP PARTITION LIST '" + partitionName[partitionCount - 2] + "'", sqlExecutionContext);
                 path.trimTo(pathLen).concat(partitionName[partitionCount - 2]);
                 Assert.assertTrue(Files.exists(path.$()));
             }
@@ -783,7 +783,7 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
             AtomicInteger fileCount = new AtomicInteger();
             for (int i = 0; i < partitionCount - 2; i++) {
                 other.trimTo(otherLen).concat(partitionName[i]).put(TableUtils.DETACHED_DIR_MARKER).$();
-                Assert.assertTrue(Files.exists(other));
+                Assert.assertTrue(Files.exists(other.$()));
                 fileCount.set(0);
                 ff.walk(other, (file, type) -> fileCount.incrementAndGet());
                 Assert.assertTrue(fileCount.get() > 0);
@@ -792,7 +792,7 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
             // verify all partitions but last one are gone
             for (int i = 0; i < partitionCount - 1; i++) {
                 path.trimTo(pathLen).concat(partitionName[i]).$();
-                Assert.assertFalse(Files.exists(path));
+                Assert.assertFalse(Files.exists(path.$()));
             }
         });
     }
@@ -804,10 +804,10 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
             final String tableName = testName.getMethodName();
             attachPartitionFromSoftLink(tableName, "REFRIGERATOR", tableToken -> {
                         TestUtils.unchecked(() -> {
-                            ddl("ALTER TABLE " + tableName + " DROP COLUMN s");
+                            execute("ALTER TABLE " + tableName + " DROP COLUMN s");
 
                             // this lad silently fails..... because the partition is read only
-                            insert("INSERT INTO " + tableName + " VALUES(666, 666, '" + readOnlyPartitionName + "T23:59:59.999999Z')");
+                            execute("INSERT INTO " + tableName + " VALUES(666, 666, '" + readOnlyPartitionName + "T23:59:59.999999Z')");
 
                             assertSql(
                                     "min\tmax\tcount\n" +
@@ -864,10 +864,10 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
             final String tableName = testName.getMethodName();
             createTableWithReadOnlyPartition(tableName, ignore -> {
                         TestUtils.unchecked(() -> {
-                            ddl("ALTER TABLE " + tableName + " DROP COLUMN s");
+                            execute("ALTER TABLE " + tableName + " DROP COLUMN s");
 
                             // silently ignored as the partition is read only
-                            insert("INSERT INTO " + tableName + " VALUES(666, 666, '" + readOnlyPartitionName + "T23:59:59.999999Z')");
+                            execute("INSERT INTO " + tableName + " VALUES(666, 666, '" + readOnlyPartitionName + "T23:59:59.999999Z')");
 
                             assertSql(
                                     "min\tmax\tcount\n" +
@@ -895,11 +895,11 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
             final String tableName = testName.getMethodName();
             createTableWithReadOnlyPartition(tableName, ignore -> {
                         try {
-                            ddl("ALTER TABLE " + tableName + " RENAME COLUMN s TO ss");
-                            ddl("ALTER TABLE " + tableName + " ALTER COLUMN ss DROP INDEX");
+                            execute("ALTER TABLE " + tableName + " RENAME COLUMN s TO ss");
+                            execute("ALTER TABLE " + tableName + " ALTER COLUMN ss DROP INDEX");
 
                             // silently ignored as the partition is read only
-                            insert("INSERT INTO " + tableName + " VALUES(666, 666, 'queso', '" + readOnlyPartitionName + "T23:59:59.999999Z')");
+                            execute("INSERT INTO " + tableName + " VALUES(666, 666, 'queso', '" + readOnlyPartitionName + "T23:59:59.999999Z')");
                             assertSql("min\tmax\tcount\n" +
                                     "2022-10-17T00:00:17.279900Z\t2022-10-18T23:59:59.000000Z\t10000\n", "SELECT min(ts), max(ts), count() FROM " + tableName
                             );
@@ -926,13 +926,13 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
             final String tableName = testName.getMethodName();
             attachPartitionFromSoftLink(tableName, "FRIO_DEL_15", tableToken -> {
                         try {
-                            ddl("TRUNCATE TABLE " + tableName, sqlExecutionContext);
+                            execute("TRUNCATE TABLE " + tableName, sqlExecutionContext);
                             assertSql("min\tmax\tcount\n" +
                                     "\t\t0\n", "SELECT min(ts), max(ts), count() FROM " + tableName
                             );
 
                             // verify cold storage folder exists
-                            Assert.assertTrue(Files.exists(other));
+                            Assert.assertTrue(Files.exists(other.$()));
                             AtomicInteger fileCount = new AtomicInteger();
                             ff.walk(other, (file, type) -> fileCount.incrementAndGet());
                             Assert.assertTrue(fileCount.get() > 0);
@@ -941,7 +941,7 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
                                     .concat(readOnlyPartitionName)
                                     .put(".2")
                                     .$();
-                            Assert.assertFalse(ff.exists(path));
+                            Assert.assertFalse(ff.exists(path.$()));
                         } catch (SqlException ex) {
                             Assert.fail(ex.getMessage());
                         }
@@ -958,7 +958,7 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
             final String tableName = testName.getMethodName();
             createTableWithReadOnlyPartition(tableName, tableToken -> {
                         try {
-                            ddl("TRUNCATE TABLE " + tableName, sqlExecutionContext);
+                            execute("TRUNCATE TABLE " + tableName, sqlExecutionContext);
                             path.of(configuration.getRoot()).concat(tableToken);
                             int plen = path.size();
                             Assert.assertFalse(ff.exists(path.concat(readOnlyPartitionName).$()));
@@ -1067,7 +1067,7 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
     private static void runO3PartitionPurgeJob() {
         engine.releaseAllReaders();
         engine.releaseAllWriters();
-        try (O3PartitionPurgeJob purgeJob = new O3PartitionPurgeJob(engine.getMessageBus(), engine.getSnapshotAgent(), 1)) {
+        try (O3PartitionPurgeJob purgeJob = new O3PartitionPurgeJob(engine, 1)) {
             while (purgeJob.run(0)) {
                 Os.pause();
             }
@@ -1076,7 +1076,7 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
 
     private void assertUpdateFailsBecausePartitionIsReadOnly(String updateSql, String tableName, String partitionName) {
         try {
-            assertException(updateSql);
+            assertExceptionNoLeakCheck(updateSql);
         } catch (CairoException e) {
             TestUtils.assertContains(
                     "cannot update read-only partition [table=" + tableName + ", partitionTimestamp=" + partitionName + "T00:00:00.000Z]",
@@ -1094,9 +1094,9 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
             );
 
             // detach partition and attach it from soft link
-            ddl("ALTER TABLE " + tableName + " DETACH PARTITION LIST '" + readOnlyPartitionName + "'", sqlExecutionContext);
+            execute("ALTER TABLE " + tableName + " DETACH PARTITION LIST '" + readOnlyPartitionName + "'", sqlExecutionContext);
             copyToDifferentLocationAndMakeAttachableViaSoftLink(tableToken, readOnlyPartitionName, otherLocation);
-            ddl("ALTER TABLE " + tableName + " ATTACH PARTITION LIST '" + readOnlyPartitionName + "'", sqlExecutionContext);
+            execute("ALTER TABLE " + tableName + " ATTACH PARTITION LIST '" + readOnlyPartitionName + "'", sqlExecutionContext);
 
             // verify that the link has been renamed to what we expect
             path.of(configuration.getRoot()).concat(tableToken).concat(readOnlyPartitionName);
@@ -1156,7 +1156,7 @@ public class AlterTableAttachPartitionFromSoftLinkTest extends AbstractAlterTabl
                 .concat(partitionName)
                 .put(configuration.getAttachPartitionSuffix())
                 .$();
-        Assert.assertEquals(0, ff.softLink(other, path));
+        Assert.assertEquals(0, ff.softLink(other.$(), path.$()));
     }
 
     private TableToken createPopulateTable(String tableName, int partitionCount) throws Exception {

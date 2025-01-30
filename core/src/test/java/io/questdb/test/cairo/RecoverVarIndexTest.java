@@ -6,7 +6,7 @@
  *    \__\_\\__,_|\___||___/\__|____/|____/
  *
  *  Copyright (c) 2014-2019 Appsicle
- *  Copyright (c) 2019-2023 QuestDB
+ *  Copyright (c) 2019-2024 QuestDB
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -116,7 +116,7 @@ public class RecoverVarIndexTest extends AbstractCairoTest {
                     RecoverVarIndex::rebuildAll);
 
             engine.releaseAllWriters();
-            insert("insert into xxx values(500100000000L, 50001, 'D', 'I2')");
+            execute("insert into xxx values(500100000000L, 50001, 'D', 'I2')");
             int sym1D = countByFullScanWhereValueD();
             Assert.assertEquals(1, sym1D);
         });
@@ -274,7 +274,7 @@ public class RecoverVarIndexTest extends AbstractCairoTest {
                         });
                 Assert.fail();
             } catch (CairoException ex) {
-                TestUtils.assertContains(ex.getFlyweightMessage(), "Cannot lock table");
+                TestUtils.assertContains(ex.getFlyweightMessage(), "cannot lock table");
             }
         });
     }
@@ -294,8 +294,8 @@ public class RecoverVarIndexTest extends AbstractCairoTest {
             AtomicInteger count = new AtomicInteger();
             ff = new TestFilesFacadeImpl() {
                 @Override
-                public int openRW(LPSZ name, long opts) {
-                    if (Utf8s.containsAscii(name, "str2.i") && count.incrementAndGet() == 14) {
+                public long openRW(LPSZ name, long opts) {
+                    if (Utf8s.containsAscii(name, "str2.i") && count.incrementAndGet() == 2) {
                         return -1;
                     }
                     return super.openRW(name, opts);
@@ -339,9 +339,9 @@ public class RecoverVarIndexTest extends AbstractCairoTest {
     private void checkRecoverVarIndex(String createTableSql, Action<String> changeTable, Action<RecoverVarIndex> rebuildIndexAction) throws Exception {
         assertMemoryLeak(ff, () -> {
             for (String sql : createTableSql.split(";")) {
-                ddl(sql);
+                execute(sql);
             }
-            ddl("create table copytbl as (select * from xxx)", sqlExecutionContext);
+            execute("create table copytbl as (select * from xxx)", sqlExecutionContext);
 
             engine.releaseAllReaders();
             engine.releaseAllWriters();
@@ -374,7 +374,7 @@ public class RecoverVarIndexTest extends AbstractCairoTest {
         try (Path path = new Path()) {
             path.concat(tablePath);
             path.put(Files.SEPARATOR);
-            TableUtils.setPathForPartition(path, partitionBy, partitionTs, partitionNameTxn);
+            TableUtils.setPathForNativePartition(path, partitionBy, partitionTs, partitionNameTxn);
             path.concat(fileName);
             LOG.info().$("removing ").$(path).$();
             Assert.assertTrue(Files.remove(path.$()));

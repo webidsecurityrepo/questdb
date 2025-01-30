@@ -6,7 +6,7 @@
  *    \__\_\\__,_|\___||___/\__|____/|____/
  *
  *  Copyright (c) 2014-2019 Appsicle
- *  Copyright (c) 2019-2023 QuestDB
+ *  Copyright (c) 2019-2024 QuestDB
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -37,21 +37,21 @@ public class TelemetryWalTask implements AbstractTelemetryTask {
     public static final String TABLE_NAME = "telemetry_wal";
     public static final Telemetry.TelemetryTypeBuilder<TelemetryWalTask> WAL_TELEMETRY = configuration -> {
         String tableName = configuration.getSystemTableNamePrefix() + TABLE_NAME;
-        return new Telemetry.TelemetryType<TelemetryWalTask>() {
+        return new Telemetry.TelemetryType<>() {
             @Override
             public QueryBuilder getCreateSql(QueryBuilder builder) {
-                return builder.$("CREATE TABLE IF NOT EXISTS \"")
+                return builder.$("CREATE TABLE IF NOT EXISTS '")
                         .$(tableName)
-                        .$("\" (" +
-                                "created timestamp, " +
-                                "event short, " +
-                                "tableId int, " +
-                                "walId int, " +
-                                "seqTxn long, " +
-                                "rowCount long," +
-                                "physicalRowCount long," +
-                                "latency float" +
-                                ") timestamp(created) partition by MONTH BYPASS WAL"
+                        .$("' (" +
+                                "created TIMESTAMP, " +
+                                "event SHORT, " +
+                                "tableId INT, " +
+                                "walId INT, " +
+                                "seqTxn LONG, " +
+                                "rowCount LONG," +
+                                "physicalRowCount LONG," +
+                                "latency FLOAT" +
+                                ") TIMESTAMP(created) PARTITION BY DAY TTL 1 WEEK BYPASS WAL"
                         );
             }
 
@@ -70,6 +70,7 @@ public class TelemetryWalTask implements AbstractTelemetryTask {
     private short event;
     private float latency; // millis
     private long physicalRowCount;
+    private long queueCursor;
     private long rowCount;
     private long seqTxn;
     private int tableId;
@@ -88,8 +89,17 @@ public class TelemetryWalTask implements AbstractTelemetryTask {
             task.rowCount = rowCount;
             task.physicalRowCount = physicalRowCount;
             task.latency = latencyUs / 1000.0f; // millis
-            telemetry.store();
+            telemetry.store(task);
         }
+    }
+
+    public long getQueueCursor() {
+        return queueCursor;
+    }
+
+    @Override
+    public void setQueueCursor(long cursor) {
+        this.queueCursor = cursor;
     }
 
     @Override

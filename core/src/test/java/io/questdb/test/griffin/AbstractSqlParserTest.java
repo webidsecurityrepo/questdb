@@ -6,7 +6,7 @@
  *    \__\_\\__,_|\___||___/\__|____/|____/
  *
  *  Copyright (c) 2014-2019 Appsicle
- *  Copyright (c) 2019-2023 QuestDB
+ *  Copyright (c) 2019-2024 QuestDB
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ public class AbstractSqlParserTest extends AbstractCairoTest {
                 for (int i = 0, n = tableModels.length; i < n; i++) {
                     AbstractCairoTest.create(tableModels[i]);
                 }
-                assertException(query, position, contains, false);
+                assertExceptionNoLeakCheck(query, position, contains, false);
             });
         } finally {
             try (Path path = new Path()) {

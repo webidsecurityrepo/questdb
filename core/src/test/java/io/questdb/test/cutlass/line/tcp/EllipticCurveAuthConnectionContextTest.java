@@ -6,7 +6,7 @@
  *    \__\_\\__,_|\___||___/\__|____/|____/
  *
  *  Copyright (c) 2014-2019 Appsicle
- *  Copyright (c) 2019-2023 QuestDB
+ *  Copyright (c) 2019-2024 QuestDB
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -57,13 +57,13 @@ public class EllipticCurveAuthConnectionContextTest extends BaseLineTcpContextTe
         microSecondTicks = -1;
         recvBuffer = null;
         disconnected = true;
-        netMsgBufferSize.set(1024);
+        recvBufferSize.set(1024);
         maxSendBytes = 1024;
         floatDefaultColumnType = ColumnType.DOUBLE;
         integerDefaultColumnType = ColumnType.LONG;
         lineTcpConfiguration = createReceiverConfiguration(true, new LineTcpNetworkFacade() {
             @Override
-            public int sendRaw(int fd, long buffer, int bufferLen) {
+            public int sendRaw(long fd, long buffer, int bufferLen) {
                 Assert.assertEquals(FD, fd);
                 if (null != sentBytes) {
                     return 0;
@@ -352,7 +352,7 @@ public class EllipticCurveAuthConnectionContextTest extends BaseLineTcpContextTe
 
     @Test
     public void testIncorrectConfig() throws Exception {
-        netMsgBufferSize.set(200);
+        recvBufferSize.set(200);
         try {
             runInAuthContext(() -> {
                 recvBuffer = "weather,location=us-midwest temperature=82 1465839830100400200\n";
@@ -371,7 +371,7 @@ public class EllipticCurveAuthConnectionContextTest extends BaseLineTcpContextTe
     public void testInvalidKeyId() throws Exception {
         runInAuthContext(() -> {
             StringBuilder token = new StringBuilder("xxxxxxxx");
-            while (token.length() < netMsgBufferSize.get()) {
+            while (token.length() < recvBufferSize.get()) {
                 token.append(token);
             }
             boolean authSequenceCompleted = authenticate(token.toString(), AUTH_PRIVATE_KEY1);

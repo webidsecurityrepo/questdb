@@ -6,7 +6,7 @@
  *    \__\_\\__,_|\___||___/\__|____/|____/
  *
  *  Copyright (c) 2014-2019 Appsicle
- *  Copyright (c) 2019-2023 QuestDB
+ *  Copyright (c) 2019-2024 QuestDB
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ public interface SqlExecutionCircuitBreaker extends ExecutionCircuitBreaker {
         }
 
         @Override
-        public boolean checkIfTripped(long millis, int fd) {
+        public boolean checkIfTripped(long millis, long fd) {
             return false;
         }
 
@@ -52,8 +52,8 @@ public interface SqlExecutionCircuitBreaker extends ExecutionCircuitBreaker {
         }
 
         @Override
-        public int getFd() {
-            return -1;
+        public long getFd() {
+            return -1L;
         }
 
         @Override
@@ -62,12 +62,22 @@ public interface SqlExecutionCircuitBreaker extends ExecutionCircuitBreaker {
         }
 
         @Override
-        public int getState(long millis, int fd) {
+        public int getState(long millis, long fd) {
             return STATE_OK;
         }
 
-        public boolean isCancelled() {
-            return false;
+        @Override
+        public long getTimeout() {
+            return -1L;
+        }
+
+        @Override
+        public void init(SqlExecutionCircuitBreaker circuitBreaker) {
+        }
+
+        @Override
+        public boolean isThreadsafe() {
+            return true;
         }
 
         @Override
@@ -81,11 +91,10 @@ public interface SqlExecutionCircuitBreaker extends ExecutionCircuitBreaker {
 
         @Override
         public void setCancelledFlag(AtomicBoolean cancelledFlag) {
-
         }
 
         @Override
-        public void setFd(int fd) {
+        public void setFd(long fd) {
         }
 
         @Override
@@ -112,12 +121,12 @@ public interface SqlExecutionCircuitBreaker extends ExecutionCircuitBreaker {
      */
     void cancel();
 
-    boolean checkIfTripped(long millis, int fd);
+    boolean checkIfTripped(long millis, long fd);
 
     @Nullable
     SqlExecutionCircuitBreakerConfiguration getConfiguration();
 
-    int getFd();
+    long getFd();
 
     /**
      * Similar to checkIfTripped() method but returns int value describing reason for tripping.
@@ -131,7 +140,7 @@ public interface SqlExecutionCircuitBreaker extends ExecutionCircuitBreaker {
     int getState();
 
     /**
-     * Similar to checkIfTripped(long millis, int fd) method but returns int value describing reason for tripping.
+     * Similar to checkIfTripped(long millis, long fd) method but returns int value describing reason for tripping.
      *
      * @return circuit breaker state, one of: <br>
      * - {@link #STATE_OK} <br>
@@ -139,7 +148,16 @@ public interface SqlExecutionCircuitBreaker extends ExecutionCircuitBreaker {
      * - {@link #STATE_BROKEN_CONNECTION} <br>
      * - {@link #STATE_TIMEOUT} <br>
      */
-    int getState(long millis, int fd);
+    int getState(long millis, long fd);
+
+    long getTimeout();
+
+    /**
+     * Initializes this circuit breaker from the one passed as a parameter by copying its state
+     */
+    void init(SqlExecutionCircuitBreaker circuitBreaker);
+
+    boolean isThreadsafe();
 
     /**
      * Checks if timer is due.
@@ -152,7 +170,7 @@ public interface SqlExecutionCircuitBreaker extends ExecutionCircuitBreaker {
 
     void setCancelledFlag(AtomicBoolean cancelled);
 
-    void setFd(int fd);
+    void setFd(long fd);
 
     /**
      * Uses internal state of the circuit breaker to assert conditions. This method also

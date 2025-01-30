@@ -6,7 +6,7 @@
  *    \__\_\\__,_|\___||___/\__|____/|____/
  *
  *  Copyright (c) 2014-2019 Appsicle
- *  Copyright (c) 2019-2023 QuestDB
+ *  Copyright (c) 2019-2024 QuestDB
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ public class UpdateOperation extends AbstractOperation {
     private volatile boolean requesterTimeout;
 
     public UpdateOperation(
-            TableToken tableToken,
+            @NotNull TableToken tableToken,
             int tableId,
             long tableVersion,
             int tableNamePosition
@@ -59,7 +59,7 @@ public class UpdateOperation extends AbstractOperation {
     }
 
     public UpdateOperation(
-            TableToken tableToken,
+            @NotNull TableToken tableToken,
             int tableId,
             long tableVersion,
             int tableNamePosition,
@@ -99,7 +99,7 @@ public class UpdateOperation extends AbstractOperation {
             if (state == SqlExecutionCircuitBreaker.STATE_CANCELLED) {
                 throw CairoException.queryCancelled(circuitBreaker.getFd());
             } else {
-                throw CairoException.queryTimedOut(circuitBreaker.getFd());
+                throw CairoException.queryTimedOut(circuitBreaker.getFd(), 0, 0);
             }
         }
     }
@@ -137,7 +137,7 @@ public class UpdateOperation extends AbstractOperation {
 
     public void testTimeout() {
         if (requesterTimeout) {
-            throw CairoException.queryTimedOut(circuitBreaker.getFd());
+            throw CairoException.queryTimedOut(circuitBreaker.getFd(), 0, 0);
         }
 
         circuitBreaker.statefulThrowExceptionIfTripped();

@@ -6,7 +6,7 @@
  *    \__\_\\__,_|\___||___/\__|____/|____/
  *
  *  Copyright (c) 2014-2019 Appsicle
- *  Copyright (c) 2019-2023 QuestDB
+ *  Copyright (c) 2019-2024 QuestDB
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,7 +24,12 @@
 
 package io.questdb;
 
-import io.questdb.cairo.*;
+import io.questdb.cairo.CairoConfiguration;
+import io.questdb.cairo.CairoEngine;
+import io.questdb.cairo.CairoException;
+import io.questdb.cairo.TableToken;
+import io.questdb.cairo.TableWriter;
+import io.questdb.cairo.sql.TableMetadata;
 import io.questdb.griffin.QueryBuilder;
 import io.questdb.griffin.SqlCompiler;
 import io.questdb.griffin.SqlException;
@@ -35,7 +40,12 @@ import io.questdb.mp.MPSequence;
 import io.questdb.mp.QueueConsumer;
 import io.questdb.mp.RingQueue;
 import io.questdb.mp.SCSequence;
-import io.questdb.std.*;
+import io.questdb.std.Chars;
+import io.questdb.std.FilesFacade;
+import io.questdb.std.Misc;
+import io.questdb.std.Numbers;
+import io.questdb.std.ObjectFactory;
+import io.questdb.std.Os;
 import io.questdb.std.datetime.microtime.MicrosecondClock;
 import io.questdb.std.str.Path;
 import io.questdb.tasks.AbstractTelemetryTask;
@@ -72,15 +82,15 @@ public final class Telemetry<T extends AbstractTelemetryTask> implements Closeab
 
     @Override
     public void close() {
-        if (writer == null) {
-            return;
+        try {
+            if (writer != null) {
+                consumeAll();
+                telemetryType.logStatus(writer, TelemetrySystemEvent.SYSTEM_DOWN, clock.getTicks());
+                writer = Misc.free(writer);
+            }
+        } finally {
+            telemetryQueue = Misc.free(telemetryQueue);
         }
-
-        consumeAll();
-        Misc.free(telemetryQueue);
-
-        telemetryType.logStatus(writer, TelemetrySystemEvent.SYSTEM_DOWN, clock.getTicks());
-        writer = Misc.free(writer);
     }
 
     public void consume(T task) {
@@ -98,8 +108,26 @@ public final class Telemetry<T extends AbstractTelemetryTask> implements Closeab
             return;
         }
         String tableName = telemetryType.getTableName();
-        telemetryType.getCreateSql(compiler.query()).compile(sqlExecutionContext);
-        final TableToken tableToken = engine.verifyTableName(tableName);
+        boolean shouldDropTable = false;
+        try {
+            TableToken tableToken = engine.verifyTableName(tableName);
+            try (TableMetadata meta = engine.getTableMetadata(tableToken)) {
+                shouldDropTable = (meta.getTtlHoursOrMonths() == 0);
+            }
+        } catch (CairoException e) {
+            if (!Chars.contains(e.getFlyweightMessage(), "table does not exist")) {
+                throw e;
+            }
+        }
+        if (shouldDropTable) {
+            compiler.query().$("DROP TABLE '").$(tableName).$("'")
+                    .compile(sqlExecutionContext)
+                    .getOperation()
+                    .execute(sqlExecutionContext, null)
+                    .await();
+        }
+        telemetryType.getCreateSql(compiler.query()).createTable(sqlExecutionContext);
+        TableToken tableToken = engine.verifyTableName(tableName);
         try {
             writer = engine.getWriter(tableToken, "telemetry");
         } catch (CairoException ex) {
@@ -135,11 +163,13 @@ public final class Telemetry<T extends AbstractTelemetryTask> implements Closeab
             return null;
         }
 
-        return telemetryQueue.get(cursor);
+        var task = telemetryQueue.get(cursor);
+        task.setQueueCursor(cursor);
+        return task;
     }
 
-    public void store() {
-        telemetryPubSeq.done(telemetryPubSeq.current());
+    public void store(T task) {
+        telemetryPubSeq.done(task.getQueueCursor());
     }
 
     private static short getCpuClass() {

@@ -6,7 +6,7 @@
  *    \__\_\\__,_|\___||___/\__|____/|____/
  *
  *  Copyright (c) 2014-2019 Appsicle
- *  Copyright (c) 2019-2023 QuestDB
+ *  Copyright (c) 2019-2024 QuestDB
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ public class TelemetryTask implements AbstractTelemetryTask {
     public static final String TABLE_NAME = "telemetry";
 
     private static final Log LOG = LogFactory.getLog(TelemetryTask.class);
-    public static final Telemetry.TelemetryTypeBuilder<TelemetryTask> TELEMETRY = configuration -> new Telemetry.TelemetryType<TelemetryTask>() {
+    public static final Telemetry.TelemetryTypeBuilder<TelemetryTask> TELEMETRY = configuration -> new Telemetry.TelemetryType<>() {
         private final TelemetryTask systemStatusTask = new TelemetryTask();
 
         @Override
@@ -46,10 +46,10 @@ public class TelemetryTask implements AbstractTelemetryTask {
                     .$("CREATE TABLE IF NOT EXISTS \"")
                     .$(TABLE_NAME)
                     .$("\" (" +
-                            "created timestamp, " +
-                            "event short, " +
-                            "origin short" +
-                            ") timestamp(created)"
+                            "created TIMESTAMP, " +
+                            "event SHORT, " +
+                            "origin SHORT" +
+                            ") TIMESTAMP(created) PARTITION BY DAY TTL 1 WEEK BYPASS WAL"
                     );
         }
 
@@ -78,6 +78,7 @@ public class TelemetryTask implements AbstractTelemetryTask {
     };
     private short event;
     private short origin;
+    private long queueCursor;
 
     private TelemetryTask() {
     }
@@ -87,8 +88,17 @@ public class TelemetryTask implements AbstractTelemetryTask {
         if (task != null) {
             task.origin = origin;
             task.event = event;
-            telemetry.store();
+            telemetry.store(task);
         }
+    }
+
+    public long getQueueCursor() {
+        return queueCursor;
+    }
+
+    @Override
+    public void setQueueCursor(long cursor) {
+        this.queueCursor = cursor;
     }
 
     @Override

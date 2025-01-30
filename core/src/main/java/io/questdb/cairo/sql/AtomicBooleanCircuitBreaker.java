@@ -6,7 +6,7 @@
  *    \__\_\\__,_|\___||___/\__|____/|____/
  *
  *  Copyright (c) 2014-2019 Appsicle
- *  Copyright (c) 2019-2023 QuestDB
+ *  Copyright (c) 2019-2024 QuestDB
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,8 +32,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 // Circuit breaker that doesn't check network connection status or timeout and only allows cancelling statement via CANCEL QUERY command .
 public class AtomicBooleanCircuitBreaker implements SqlExecutionCircuitBreaker {
     private final int throttle;
-    private AtomicBoolean cancelledFlag;
-    private int fd = -1;
+    protected AtomicBoolean cancelledFlag;
+    private long fd = -1;
     private int testCount = 0;
 
     public AtomicBooleanCircuitBreaker() {
@@ -46,11 +46,13 @@ public class AtomicBooleanCircuitBreaker implements SqlExecutionCircuitBreaker {
     }
 
     public void cancel() {
-        cancelledFlag.set(true);
+        if (cancelledFlag != null) {
+            cancelledFlag.set(true);
+        }
     }
 
     @Override
-    public boolean checkIfTripped(long millis, int fd) {
+    public boolean checkIfTripped(long millis, long fd) {
         return isCancelled();
     }
 
@@ -70,7 +72,7 @@ public class AtomicBooleanCircuitBreaker implements SqlExecutionCircuitBreaker {
     }
 
     @Override
-    public int getFd() {
+    public long getFd() {
         return fd;
     }
 
@@ -80,8 +82,23 @@ public class AtomicBooleanCircuitBreaker implements SqlExecutionCircuitBreaker {
     }
 
     @Override
-    public int getState(long millis, int fd) {
+    public int getState(long millis, long fd) {
         return getState();
+    }
+
+    @Override
+    public long getTimeout() {
+        throw new UnsupportedOperationException("AtomicBooleanCircuitBreaker does not support timeout");
+    }
+
+    @Override
+    public void init(SqlExecutionCircuitBreaker circuitBreaker) {
+        fd = circuitBreaker.getFd();
+    }
+
+    @Override
+    public boolean isThreadsafe() {
+        return true;
     }
 
     @Override
@@ -90,7 +107,9 @@ public class AtomicBooleanCircuitBreaker implements SqlExecutionCircuitBreaker {
     }
 
     public void reset() {
-        cancelledFlag.set(false);
+        if (cancelledFlag != null) {
+            cancelledFlag.set(false);
+        }
     }
 
     @Override
@@ -104,7 +123,7 @@ public class AtomicBooleanCircuitBreaker implements SqlExecutionCircuitBreaker {
     }
 
     @Override
-    public void setFd(int fd) {
+    public void setFd(long fd) {
         this.fd = fd;
     }
 
@@ -130,6 +149,6 @@ public class AtomicBooleanCircuitBreaker implements SqlExecutionCircuitBreaker {
     }
 
     private boolean isCancelled() {
-        return cancelledFlag.get();
+        return cancelledFlag == null || cancelledFlag.get();
     }
 }

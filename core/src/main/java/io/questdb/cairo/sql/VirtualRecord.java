@@ -6,7 +6,7 @@
  *    \__\_\\__,_|\___||___/\__|____/|____/
  *
  *  Copyright (c) 2014-2019 Appsicle
- *  Copyright (c) 2019-2023 QuestDB
+ *  Copyright (c) 2019-2024 QuestDB
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,14 +25,9 @@
 package io.questdb.cairo.sql;
 
 import io.questdb.cairo.ColumnTypes;
-import io.questdb.std.BinarySequence;
-import io.questdb.std.Long256;
-import io.questdb.std.Numbers;
-import io.questdb.std.ObjList;
+import io.questdb.std.*;
 import io.questdb.std.str.CharSink;
-import io.questdb.std.str.Utf16Sink;
 import io.questdb.std.str.Utf8Sequence;
-import io.questdb.std.str.Utf8Sink;
 
 public class VirtualRecord implements ColumnTypes, Record {
     private final int columnCount;
@@ -133,6 +128,11 @@ public class VirtualRecord implements ColumnTypes, Record {
     }
 
     @Override
+    public Interval getInterval(int col) {
+        return getFunction(col).getInterval(base);
+    }
+
+    @Override
     public long getLong(int col) {
         return getFunction(col).getLong(base);
     }
@@ -183,28 +183,8 @@ public class VirtualRecord implements ColumnTypes, Record {
     }
 
     @Override
-    public void getVarchar(int col, Utf8Sink utf8Sink) {
-        getFunction(col).getVarchar(base, utf8Sink);
-    }
-
-    @Override
-    public Utf8Sequence getVarcharA(int col) {
-        return getFunction(col).getVarcharA(base);
-    }
-
-    @Override
-    public Utf8Sequence getVarcharB(int col) {
-        return getFunction(col).getVarcharB(base);
-    }
-
-    @Override
     public CharSequence getStrA(int col) {
         return getFunction(col).getStrA(base);
-    }
-
-    @Override
-    public void getStr(int col, Utf16Sink utf16Sink) {
-        getFunction(col).getStr(base, utf16Sink);
     }
 
     @Override
@@ -235,6 +215,21 @@ public class VirtualRecord implements ColumnTypes, Record {
     @Override
     public long getUpdateRowId() {
         return base.getUpdateRowId();
+    }
+
+    @Override
+    public Utf8Sequence getVarcharA(int col) {
+        return getFunction(col).getVarcharA(base);
+    }
+
+    @Override
+    public Utf8Sequence getVarcharB(int col) {
+        return getFunction(col).getVarcharB(base);
+    }
+
+    @Override
+    public int getVarcharSize(int col) {
+        return getFunction(col).getVarcharSize(base);
     }
 
     public void of(Record record) {
